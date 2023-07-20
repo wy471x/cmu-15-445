@@ -1,0 +1,1 @@
+select p.name, strftime('%Y') - p.born age from people p where p.born is not null and p.born >= 1900 order by age desc, name limit 20;

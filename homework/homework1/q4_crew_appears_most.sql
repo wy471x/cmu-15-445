@@ -1,0 +1,1 @@
+select p.name, count(*) num_appearances from people p, crew c where p.person_id = c.person_id group by p.person_id order by num_appearances desc limit 20;

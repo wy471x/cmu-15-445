@@ -1,0 +1,1 @@
+select cast(t.premiered / 10 as varchar) || '0s' decade, round(AVG(r.rating), 2) avg_rating, MAX(r.rating) top_rating, MIN(r.rating) min_rating, count(*) num_releases from titles t, ratings r where t.title_id = r.title_id and t.premiered is not null group by decade order by avg_rating desc, decade;
