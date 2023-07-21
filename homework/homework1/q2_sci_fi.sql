@@ -1,1 +1,6 @@
-select distinct a.title, t.premiered, t.runtime_minutes || ' (mins)' from akas a, titles t where a.title_id = t.title_id and t.genres like '%Sci-Fi%' order by t.runtime_minutes desc, a.title limit 10;
+SELECT
+t.primary_title,
+t.premiered,
+t.runtime_minutes || ' (mins)'
+FROM titles t
+WHERE t.genres LIKE '%Sci-Fi%' ORDER BY t.runtime_minutes DESC, t.primary_title LIMIT 10;
