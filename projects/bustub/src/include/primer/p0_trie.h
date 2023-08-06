@@ -21,6 +21,7 @@
 
 #include "common/exception.h"
 #include "common/rwlatch.h"
+#include "common/logger.h"
 
 namespace bustub {
 
@@ -40,7 +41,10 @@ class TrieNode {
    *
    * @param key_char Key character of this trie node
    */
-  explicit TrieNode(char key_char) { this->key_char_ = key_char; }
+  explicit TrieNode(char key_char) { 
+    LOG_INFO("TrieNode constructor: key = %c", key_char);
+    this->key_char_ = key_char; 
+  }
 
   /**
    * TODO(P0): Add implementation
@@ -71,7 +75,10 @@ class TrieNode {
    * @param key_char Key char of child node.
    * @return True if this trie node has a child with given key, false otherwise.
    */
-  bool HasChild(char key_char) const { return this->children_.count(key_char) == 1; }
+  bool HasChild(char key_char) const { 
+    LOG_INFO("#TrieNode:HasChild: key_char = %c", key_char);
+    return this->children_.count(key_char) == 1; 
+  }
 
   /**
    * TODO(P0): Add implementation
@@ -106,7 +113,7 @@ class TrieNode {
    *
    * @brief Insert a child node for this trie node into children_ map, given the key char and
    * unique_ptr of the child node. If specified key_char already exists in children_,
-   * return nullptr. If parameter `child`'s key char is different than parameter
+   * return nullptr. If parameter `child`' s key char is different than parameter
    * `key_char`, return nullptr.
    *
    * Note that parameter `child` is rvalue and should be moved when it is
@@ -124,8 +131,8 @@ class TrieNode {
     if (key_char != child->GetKeyChar() || this->children_.count(key_char) == 1) {
       return nullptr;
     }
-    this->children_.insert(std::make_pair(key_char, std::move(child)));
-    return &child;
+    this->children_[key_char] = std::move(child);
+    return &this->children_[key_char];
   }
 
   /**
@@ -264,7 +271,10 @@ class Trie {
    * @brief Construct a new Trie object. Initialize the root node with '\0'
    * character.
    */
-  Trie() { this->root_ = std::unique_ptr<TrieNode>(new TrieNode('\0')); }
+  Trie() {
+    this->root_ = std::unique_ptr<TrieNode>(new TrieNode('\0')); 
+    LOG_INFO("#Trie:constructor = %c", this->root_->GetKeyChar());
+  }
 
   /**
    * TODO(P0): Add implementation
@@ -294,29 +304,34 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
-    std::unique_ptr<TrieNode> cur(std::move(this->root_));
+    if (key.size() == 0) {
+      return false;
+    }
+
+    TrieNode *cur = this->root_.get();
     for (size_t i = 0; i < key.size(); i++) {
       if (i < key.size() - 1) {
-        if (cur->HasChild(key[i]) == 0) {
+        if (cur->HasChild(key[i]) == false) {
           TrieNode node(key[i]);
           std::unique_ptr<TrieNode> new_node_ptr(new TrieNode(std::move(node)));
           cur->InsertChildNode(key[i], std::move(new_node_ptr));
-          cur = std::move(new_node_ptr);
-        } else {
-          cur = std::move(*cur->GetChildNode(key[i]));
         }
+        cur = cur->GetChildNode(key[i])->get();
       } else {
-        //  1.
+        //  1. If TrieNode with this ending character does not exist, create new TrieNodeWithValue
+        // and add it to parent node's children_ map.
         if (cur->HasChild(key[i]) == false) {
           TrieNodeWithValue<T> node(key[i], value);
           std::unique_ptr<TrieNodeWithValue<T>> new_node_ptr(new TrieNodeWithValue<T>(std::move(node), value));
           cur->InsertChildNode(key[i], std::move(new_node_ptr));
         }
-        // 2.
+        // 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by
+        // invoking the appropriate constructor.
         if (cur->HasChild(key[i]) == true && (*cur->GetChildNode(key[i]))->IsEndNode() == false) {
           TrieNodeWithValue<T> node(std::move(*(*cur->GetChildNode(key[i]))), value);
         }
-        // 3.
+        // 3. If it is already a TrieNodeWithValue,
+        // then insertion fails and returns false. Do not overwrite existing data with new data.
         if (cur->HasChild(key[i]) == true && (*cur->GetChildNode(key[i]))->IsEndNode() == true) {
           return false;
         }
@@ -387,21 +402,21 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
-    std::unique_ptr<TrieNode> cur = std::move(this->root_);
+    TrieNode *cur = this->root_.get();
     for (size_t i = 0; i < key.size(); i++) {
       if (i < key.size() - 1) {
         if (cur->HasChild(key[i]) == false) {
           break;
         }
-        cur = std::move(*cur->GetChildNode(key[i]));
+        cur = cur->GetChildNode(key[i])->get();
       } else {
         if (cur->HasChild(key[i]) == false) {
           break;
         }
         std::unique_ptr<TrieNodeWithValue<T>> valueNode = 
         bustub::DynamicPtrCast<TrieNodeWithValue<T>, TrieNode>(std::move((*cur->GetChildNode(key[i]))));
-        if (cur->HasChild(key[i]) != 0 && valueNode != nullptr) {
-          *success = false;
+        if (cur->HasChild(key[i]) == true && valueNode != nullptr) {
+          *success = true;
           return valueNode->GetValue();
         }
       }
