@@ -42,7 +42,7 @@ class TrieNode {
    * @param key_char Key character of this trie node
    */
   explicit TrieNode(char key_char) { 
-    LOG_INFO("TrieNode constructor: key = %c", key_char);
+    // LOG_INFO("TrieNode constructor: key = %c", key_char);
     this->key_char_ = key_char; 
   }
 
@@ -76,7 +76,7 @@ class TrieNode {
    * @return True if this trie node has a child with given key, false otherwise.
    */
   bool HasChild(char key_char) const { 
-    LOG_INFO("#TrieNode:HasChild: key_char = %c", key_char);
+    // LOG_INFO("#TrieNode:HasChild: key_char = %c", key_char);
     return this->children_.count(key_char) == 1; 
   }
 
@@ -273,7 +273,7 @@ class Trie {
    */
   Trie() {
     this->root_ = std::unique_ptr<TrieNode>(new TrieNode('\0')); 
-    LOG_INFO("#Trie:constructor = %c", this->root_->GetKeyChar());
+    // LOG_INFO("#Trie:constructor = %c", this->root_->GetKeyChar());
   }
 
   /**
@@ -324,15 +324,19 @@ class Trie {
           TrieNodeWithValue<T> node(key[i], value);
           std::unique_ptr<TrieNodeWithValue<T>> new_node_ptr(new TrieNodeWithValue<T>(std::move(node), value));
           cur->InsertChildNode(key[i], std::move(new_node_ptr));
+          break;
         }
-        // 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by
-        // invoking the appropriate constructor.
-        if (cur->HasChild(key[i]) == true && (*cur->GetChildNode(key[i]))->IsEndNode() == false) {
-          TrieNodeWithValue<T> node(std::move(*(*cur->GetChildNode(key[i]))), value);
-        }
-        // 3. If it is already a TrieNodeWithValue,
-        // then insertion fails and returns false. Do not overwrite existing data with new data.
-        if (cur->HasChild(key[i]) == true && (*cur->GetChildNode(key[i]))->IsEndNode() == true) {
+        
+        if (cur->HasChild(key[i]) == true) {
+          // 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by
+          // invoking the appropriate constructor.
+          if ((*cur->GetChildNode(key[i]))->IsEndNode() == false) {
+            TrieNodeWithValue<T> node(std::move(*(*cur->GetChildNode(key[i]))), value);
+            std::unique_ptr<TrieNodeWithValue<T>> new_node_ptr(new TrieNodeWithValue<T>(std::move(node), value));
+            cur->InsertChildNode(key[i], std::move(new_node_ptr));
+          }
+          // 3. If it is already a TrieNodeWithValue,
+          // then insertion fails and returns false. Do not overwrite existing data with new data.
           return false;
         }
       }
@@ -413,8 +417,8 @@ class Trie {
         if (cur->HasChild(key[i]) == false) {
           break;
         }
-        std::unique_ptr<TrieNodeWithValue<T>> valueNode = 
-        bustub::DynamicPtrCast<TrieNodeWithValue<T>, TrieNode>(std::move((*cur->GetChildNode(key[i]))));
+        TrieNodeWithValue<T> *valueNode = 
+        dynamic_cast<TrieNodeWithValue<T> *>((*cur->GetChildNode(key[i])).get());
         if (cur->HasChild(key[i]) == true && valueNode != nullptr) {
           *success = true;
           return valueNode->GetValue();
