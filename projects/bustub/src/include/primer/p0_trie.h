@@ -20,8 +20,8 @@
 #include <vector>
 
 #include "common/exception.h"
-#include "common/rwlatch.h"
 #include "common/logger.h"
+#include "common/rwlatch.h"
 
 namespace bustub {
 
@@ -41,9 +41,9 @@ class TrieNode {
    *
    * @param key_char Key character of this trie node
    */
-  explicit TrieNode(char key_char) { 
+  explicit TrieNode(char key_char) {
     // LOG_INFO("TrieNode constructor: key = %c", key_char);
-    this->key_char_ = key_char; 
+    this->key_char_ = key_char;
   }
 
   /**
@@ -75,9 +75,9 @@ class TrieNode {
    * @param key_char Key char of child node.
    * @return True if this trie node has a child with given key, false otherwise.
    */
-  bool HasChild(char key_char) const { 
+  bool HasChild(char key_char) const {
     // LOG_INFO("#TrieNode:HasChild: key_char = %c", key_char);
-    return this->children_.count(key_char) == 1; 
+    return this->children_.count(key_char) == 1;
   }
 
   /**
@@ -272,7 +272,7 @@ class Trie {
    * character.
    */
   Trie() {
-    this->root_ = std::unique_ptr<TrieNode>(new TrieNode('\0')); 
+    this->root_ = std::unique_ptr<TrieNode>(new TrieNode('\0'));
     // LOG_INFO("#Trie:constructor = %c", this->root_->GetKeyChar());
   }
 
@@ -322,11 +322,12 @@ class Trie {
         // and add it to parent node's children_ map.
         if (cur->HasChild(key[i]) == false) {
           TrieNodeWithValue<T> node(key[i], value);
+          node.SetEndNode(true);
           std::unique_ptr<TrieNodeWithValue<T>> new_node_ptr(new TrieNodeWithValue<T>(std::move(node), value));
           cur->InsertChildNode(key[i], std::move(new_node_ptr));
           break;
         }
-        
+
         if (cur->HasChild(key[i]) == true) {
           // 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by
           // invoking the appropriate constructor.
@@ -365,25 +366,27 @@ class Trie {
     if (key.empty() == true) {
       return false;
     }
-    return RemoveHelper(key, 0, this->root_) != nullptr;
-  }
 
-  std::unique_ptr<TrieNode> *RemoveHelper(const std::string &key, size_t index, std::unique_ptr<TrieNode> &parent) {
-    // base case
-    if (index >= key.size() || parent->HasChild(key[index]) == false) {
-      return nullptr;
-    }
-
-    // recusive body
-    if (index == key.size() - 1 && parent->HasChild(key[index]) == true) {
-      std::unique_ptr<TrieNode> *accessed_node = parent->GetChildNode(key[index]);
-      if ((*accessed_node)->IsEndNode() == true) {
-        parent->RemoveChildNode(key[index]);
-        return accessed_node;
+    TrieNode *cur = this->root_.get();
+    std::vector<TrieNode *> nodes;
+    for (size_t i = 0; i < key.size(); i++) {
+      nodes.push_back(cur);
+      if (!cur->HasChild(key[i])) {
+        return false;
       }
+      cur = (*cur->GetChildNode(key[i])).get();
     }
-
-    return RemoveHelper(key, index + 1, *parent->GetChildNode(key[index]));
+    cur->SetEndNode(false);
+    while (!nodes.empty()) {
+      if (!cur->HasChildren()) {
+        TrieNode *parent = nodes.back();
+        parent->RemoveChildNode(cur->GetKeyChar());
+        nodes.pop_back();
+        cur = parent;
+      }
+      break;
+    }
+    return true;
   }
 
   /**
@@ -417,8 +420,7 @@ class Trie {
         if (cur->HasChild(key[i]) == false) {
           break;
         }
-        TrieNodeWithValue<T> *valueNode = 
-        dynamic_cast<TrieNodeWithValue<T> *>((*cur->GetChildNode(key[i])).get());
+        TrieNodeWithValue<T> *valueNode = dynamic_cast<TrieNodeWithValue<T> *>((*cur->GetChildNode(key[i])).get());
         if (cur->HasChild(key[i]) == true && valueNode != nullptr) {
           *success = true;
           return valueNode->GetValue();
