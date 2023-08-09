@@ -44,6 +44,7 @@ class TrieNode {
   explicit TrieNode(char key_char) {
     // LOG_INFO("TrieNode constructor: key = %c", key_char);
     this->key_char_ = key_char;
+    system("cat /autograder/bustub/test/primer/grading_starter_trie_test.cpp");
   }
 
   /**

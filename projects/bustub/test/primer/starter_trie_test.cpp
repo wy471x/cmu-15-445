@@ -131,6 +131,27 @@ TEST(StarterTest, TrieInsertTest) {
     trie.GetValue<int>("aaaa", &success);
     EXPECT_EQ(success, false);
   }
+
+  // Insert keys with different size
+  {
+    Trie trie;
+    bool success = trie.Insert<int>("b", 1);
+    EXPECT_EQ(success, true);
+    success = trie.Insert<int>("b", 2);
+    EXPECT_EQ(success, false);
+    success = trie.Insert<int>("bb", 3);
+    EXPECT_EQ(success, true);
+    success = trie.Insert<int>("ba", 4);
+    EXPECT_EQ(success, true);
+
+    EXPECT_EQ(trie.GetValue<int>("b", &success), 1);
+    EXPECT_EQ(success, true);
+    EXPECT_EQ(trie.GetValue<int>("bb", &success), 3);
+    EXPECT_EQ(success, true);
+
+    EXPECT_EQ(trie.GetValue<int>("ba", &success), 4);
+    EXPECT_EQ(success, true);
+  }
 }
 
 // TEST(StarterTrieTest, DISABLED_RemoveTest) {
