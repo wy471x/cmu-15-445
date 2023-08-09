@@ -56,8 +56,8 @@ class TrieNode {
    */
   TrieNode(TrieNode &&other_trie_node) noexcept {
     this->key_char_ = other_trie_node.key_char_;
-    for (auto it = other_trie_node.children_.begin(); it != other_trie_node.children_.end(); ++it) {
-      this->children_[it->first] = std::move(it->second);
+    for (auto &it : other_trie_node.children_) {
+      this->children_[it.first] = std::move(it.second);
     }
     this->is_end_ = other_trie_node.is_end_;
   }
@@ -169,9 +169,8 @@ class TrieNode {
       if (it->first == key_char) {
         it = this->children_.erase(it);
         return;
-      } else {
-        ++it;
       }
+      ++it;
     }
   }
 
@@ -272,7 +271,7 @@ class Trie {
    * character.
    */
   Trie() {
-    this->root_ = std::unique_ptr<TrieNode>(new TrieNode('\0'));
+    this->root_ = std::make_unique<TrieNode>('\0');
     // LOG_INFO("#Trie:constructor = %c", this->root_->GetKeyChar());
   }
 
@@ -304,14 +303,15 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
-    if (key.size() == 0) {
+    if (key.empty()) {
       return false;
     }
 
+    latch_.WLock();
     TrieNode *cur = this->root_.get();
     for (size_t i = 0; i < key.size(); i++) {
       if (i < key.size() - 1) {
-        if (cur->HasChild(key[i]) == false) {
+        if (!cur->HasChild(key[i])) {
           TrieNode node(key[i]);
           std::unique_ptr<TrieNode> new_node_ptr(new TrieNode(std::move(node)));
           cur->InsertChildNode(key[i], std::move(new_node_ptr));
@@ -320,7 +320,7 @@ class Trie {
       } else {
         //  1. If TrieNode with this ending character does not exist, create new TrieNodeWithValue
         // and add it to parent node's children_ map.
-        if (cur->HasChild(key[i]) == false) {
+        if (!cur->HasChild(key[i])) {
           TrieNodeWithValue<T> node(key[i], value);
           node.SetEndNode(true);
           std::unique_ptr<TrieNodeWithValue<T>> new_node_ptr(new TrieNodeWithValue<T>(std::move(node), value));
@@ -328,20 +328,22 @@ class Trie {
           break;
         }
 
-        if (cur->HasChild(key[i]) == true) {
+        if (cur->HasChild(key[i])) {
           // 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by
           // invoking the appropriate constructor.
-          if ((*cur->GetChildNode(key[i]))->IsEndNode() == false) {
+          if (!(*cur->GetChildNode(key[i]))->IsEndNode()) {
             TrieNodeWithValue<T> node(std::move(*(*cur->GetChildNode(key[i]))), value);
             std::unique_ptr<TrieNodeWithValue<T>> new_node_ptr(new TrieNodeWithValue<T>(std::move(node), value));
             cur->InsertChildNode(key[i], std::move(new_node_ptr));
           }
           // 3. If it is already a TrieNodeWithValue,
           // then insertion fails and returns false. Do not overwrite existing data with new data.
+          latch_.WUnlock();
           return false;
         }
       }
     }
+    latch_.WUnlock();
     return true;
   }
 
@@ -363,18 +365,20 @@ class Trie {
    * @return True if the key exists and is removed, false otherwise
    */
   bool Remove(const std::string &key) {
-    if (key.empty() == true) {
+    if (key.empty()) {
       return false;
     }
 
+    latch_.WLock();
     TrieNode *cur = this->root_.get();
     std::vector<TrieNode *> nodes;
-    for (size_t i = 0; i < key.size(); i++) {
+    for (char c : key) {
       nodes.push_back(cur);
-      if (!cur->HasChild(key[i])) {
+      if (!cur->HasChild(c)) {
+        latch_.WUnlock();
         return false;
       }
-      cur = (*cur->GetChildNode(key[i])).get();
+      cur = (*cur->GetChildNode(c)).get();
     }
     cur->SetEndNode(false);
     while (!nodes.empty()) {
@@ -383,9 +387,11 @@ class Trie {
         parent->RemoveChildNode(cur->GetKeyChar());
         nodes.pop_back();
         cur = parent;
+        continue;
       }
       break;
     }
+    latch_.WUnlock();
     return true;
   }
 
@@ -409,25 +415,28 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
+    latch_.RLock();
     TrieNode *cur = this->root_.get();
     for (size_t i = 0; i < key.size(); i++) {
       if (i < key.size() - 1) {
-        if (cur->HasChild(key[i]) == false) {
+        if (!cur->HasChild(key[i])) {
           break;
         }
         cur = cur->GetChildNode(key[i])->get();
       } else {
-        if (cur->HasChild(key[i]) == false) {
+        if (!cur->HasChild(key[i])) {
           break;
         }
-        TrieNodeWithValue<T> *valueNode = dynamic_cast<TrieNodeWithValue<T> *>((*cur->GetChildNode(key[i])).get());
-        if (cur->HasChild(key[i]) == true && valueNode != nullptr) {
+        auto *value_node = dynamic_cast<TrieNodeWithValue<T> *>((*cur->GetChildNode(key[i])).get());
+        if (cur->HasChild(key[i]) && value_node != nullptr) {
           *success = true;
-          return valueNode->GetValue();
+          latch_.RUnlock();
+          return value_node->GetValue();
         }
       }
     }
     *success = false;
+    latch_.RUnlock();
     return {};
   }
 };
