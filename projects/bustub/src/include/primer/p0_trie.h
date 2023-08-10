@@ -44,7 +44,7 @@ class TrieNode {
   explicit TrieNode(char key_char) {
     // LOG_INFO("TrieNode constructor: key = %c", key_char);
     this->key_char_ = key_char;
-    system("cat /autograder/bustub/test/primer/grading_starter_trie_test.cpp");
+    // system("cat /autograder/bustub/test/primer/grading_starter_trie_test.cpp");
   }
 
   /**
@@ -332,10 +332,14 @@ class Trie {
         if (cur->HasChild(key[i])) {
           // 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by
           // invoking the appropriate constructor.
-          if (!(*cur->GetChildNode(key[i]))->IsEndNode()) {
+          auto terminal_node = dynamic_cast<TrieNodeWithValue <T> *>((*cur->GetChildNode(key[i])).get());
+          if (terminal_node == nullptr) {
             TrieNodeWithValue<T> node(std::move(*(*cur->GetChildNode(key[i]))), value);
             std::unique_ptr<TrieNodeWithValue<T>> new_node_ptr(new TrieNodeWithValue<T>(std::move(node), value));
+            cur->RemoveChildNode(key[i]);
             cur->InsertChildNode(key[i], std::move(new_node_ptr));
+            latch_.WUnlock();
+            return true;
           }
           // 3. If it is already a TrieNodeWithValue,
           // then insertion fails and returns false. Do not overwrite existing data with new data.
@@ -428,7 +432,7 @@ class Trie {
         if (!cur->HasChild(key[i])) {
           break;
         }
-        auto *value_node = dynamic_cast<TrieNodeWithValue<T> *>((*cur->GetChildNode(key[i])).get());
+        auto value_node = dynamic_cast<TrieNodeWithValue<T> *>((*cur->GetChildNode(key[i])).get());
         if (cur->HasChild(key[i]) && value_node != nullptr) {
           *success = true;
           latch_.RUnlock();
