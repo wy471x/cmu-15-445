@@ -64,6 +64,18 @@ class ExtendibleHashTable : public HashTable<K, V> {
   auto GetNumBuckets() const -> int;
 
   /**
+   * @brief Increment depth of the global.
+   * @return The depth of global.
+  */
+  void IncrementGlobalDepth();
+
+  /**
+   * @brief Get the number of directory.
+   * @return The number of directory.
+   */
+  auto GetDirectoryNum() const -> int;
+
+  /**
    *
    * TODO(P1): Add implementation
    *
@@ -162,6 +174,7 @@ class ExtendibleHashTable : public HashTable<K, V> {
     size_t size_;
     int depth_;
     std::list<std::pair<K, V>> list_;
+    // size_t bucket_id_;
   };
 
  private:
@@ -181,6 +194,10 @@ class ExtendibleHashTable : public HashTable<K, V> {
    * @param bucket The bucket to be redistributed.
    */
   auto RedistributeBucket(std::shared_ptr<Bucket> bucket) -> void;
+
+  auto RehashDirectoryPointers(std::shared_ptr<Bucket> first, std::shared_ptr<Bucket> second, size_t index) -> void;
+
+  auto SplitAndRehash(std::shared_ptr<Bucket> bucket, size_t index, int depth) -> void;
 
   /*****************************************************************
    * Must acquire latch_ first before calling the below functions. *
