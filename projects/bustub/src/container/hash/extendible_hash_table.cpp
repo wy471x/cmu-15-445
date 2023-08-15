@@ -17,8 +17,8 @@
 #include <utility>
 
 #include "container/hash/extendible_hash_table.h"
-#include "storage/page/page.h"
 #include "include/common/logger.h"
+#include "storage/page/page.h"
 
 namespace bustub {
 
@@ -90,23 +90,39 @@ auto ExtendibleHashTable<K, V>::RedistributeBucket(std::shared_ptr<Bucket> bucke
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::RehashDirectoryPointers(std::shared_ptr<Bucket> first, std::shared_ptr<Bucket> second,
-                                                        size_t index) -> void {
+                                                        size_t index, int local_depth, int global_depth) -> void {
   size_t distance = 1 << (global_depth_ - 1);
-  dir_[index] = first;
-  dir_[index + distance] = second;
-  for (size_t i = 0; i < distance; i++) {
-    if (dir_[index + distance] == nullptr) {
-      dir_[index + distance] = dir_[index];
+  if (local_depth == global_depth) {
+    dir_[index] = first;
+    dir_[index + distance] = second;
+    for (size_t i = 0; i < distance; i++) {
+      if (dir_[i + distance] == nullptr) {
+        dir_[i + distance] = dir_[i];
+      }
+    }
+    return;
+  }
+  std::shared_ptr<Bucket> old_bucket = dir_[index];
+  size_t dir_size = GetDirectoryNum();
+  for (size_t i = 0; i < dir_size; i++) {
+    if (dir_[i] == old_bucket) {
+      auto specified_bit = (1 << i) & local_depth;
+      if (specified_bit == 0) {
+        dir_[i] = first;
+      } else {
+        dir_[i] = second;
+      }
     }
   }
 }
 
 template <typename K, typename V>
-auto ExtendibleHashTable<K, V>::SplitAndRehash(std::shared_ptr<Bucket> bucket, size_t index, int depth) -> void {
+auto ExtendibleHashTable<K, V>::SplitAndRehash(std::shared_ptr<Bucket> bucket, size_t index, int local_depth,
+                                               int global_depth) -> void {
   // create two new bucket and increment local depth.
-  auto new_first_bucket = std::make_shared<Bucket>(bucket_size_, depth + 1);
-  auto new_second_bucket = std::make_shared<Bucket>(bucket_size_, depth + 1);
-  RehashDirectoryPointers(new_first_bucket, new_second_bucket, index);
+  auto new_first_bucket = std::make_shared<Bucket>(bucket_size_, local_depth + 1);
+  auto new_second_bucket = std::make_shared<Bucket>(bucket_size_, local_depth + 1);
+  RehashDirectoryPointers(new_first_bucket, new_second_bucket, index, local_depth, global_depth);
   RedistributeBucket(bucket);
 }
 
@@ -145,25 +161,24 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
     return;
   }
 
-  auto global_depth = GetGlobalDepth(), local_depth = GetLocalDepth(dir_index);
+  auto global_depth = GetGlobalDepthInternal();
+  auto local_depth = GetLocalDepthInternal(dir_index);
   if (local_depth == global_depth) {
     IncrementGlobalDepth();
     // double directory size.
     dir_.resize(dir_.size() * 2);
-    // create two new bucket and increment local depth.
-    SplitAndRehash(indexed_bucket, dir_index, local_depth);
-    // finally insert pair to bucket.
-    dir_[dir_index]->Insert(key, value);
-    num_buckets_++;
+    // create two new bucket.
+    SplitAndRehash(indexed_bucket, dir_index, local_depth, global_depth);
   }
 
   if (local_depth < global_depth) {
     // create two new bucket and increment local depth.
-    SplitAndRehash(indexed_bucket, dir_index, local_depth);
-    // finally insert pair to bucket.
-    dir_[dir_index]->Insert(key, value);
-    num_buckets_++;
+    SplitAndRehash(indexed_bucket, dir_index, local_depth, global_depth);
   }
+
+  num_buckets_++;
+  latch_.unlock();
+  Insert(key, value);
 }
 
 //===--------------------------------------------------------------------===//
