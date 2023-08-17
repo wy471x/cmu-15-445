@@ -135,19 +135,34 @@ class LRUKReplacer {
  
  class Frame {
   public:
-    explicit Frame(frame_id_t frame_id) {
-      frame_id_ = frame_id;
+
+   explicit Frame(frame_id_t&& frame_id) {
+    frame_id_ = frame_id;
+    evictable_ = false;
+    used_cnt_ = 0;
+    access_timestamp_ = 0;
+   }
+    
+    explicit Frame(Frame&& frame) {
+      frame_id_ = frame.frame_id_;
+      used_cnt_ = frame.used_cnt_;
+      evictable_ = frame.evictable_;
+      access_timestamp_ = frame.access_timestamp_;
     }
 
-    inline auto GetUsedCnt() -> const int {
+    inline auto GetUsedCnt() const -> size_t {
       return used_cnt_;
+    }
+
+    inline auto SetEvictable(bool evictable) -> void {
+      evictable_ = evictable;
     }
 
     inline auto IsEvictable() -> bool {
       return evictable_;
     }
 
-    inline auto GetFrameId() -> const frame_id_t {
+    inline auto GetFrameId() const -> frame_id_t {
       return frame_id_;
     }
 
@@ -160,7 +175,7 @@ class LRUKReplacer {
     }
 
   private:
-    int used_cnt_;
+    size_t used_cnt_;
     bool evictable_;
     frame_id_t frame_id_;
     size_t access_timestamp_;
@@ -169,15 +184,15 @@ class LRUKReplacer {
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  size_t current_timestamp_{0};
-  // [[maybe_unused]] size_t curr_size_{0};
+  // size_t current_timestamp_{0};
+  size_t curr_size_{0};
   size_t replacer_size_;
   size_t k_;
   std::mutex latch_;
-  std::list<std::unique_ptr<Frame>> greater_than_eq_k;
-  std::list<std::unique_ptr<Frame>> less_than_k;
-  std::unordered_map<frame_id_t, std::list<std::unique_ptr<Frame>>::iterator> greater_than_eq_k_map;
-  std::unordered_map<frame_id_t, std::list<std::unique_ptr<Frame>>::iterator> less_than_k_map;
+  std::list<std::unique_ptr<bustub::LRUKReplacer::Frame>> greater_than_eq_k;
+  std::list<std::unique_ptr<bustub::LRUKReplacer::Frame>> less_than_k;
+  std::unordered_map<frame_id_t, std::list<std::unique_ptr<bustub::LRUKReplacer::Frame>>::iterator> greater_than_eq_k_map;
+  std::unordered_map<frame_id_t, std::list<std::unique_ptr<bustub::LRUKReplacer::Frame>>::iterator> less_than_k_map;
 };
 
 }  // namespace bustub
