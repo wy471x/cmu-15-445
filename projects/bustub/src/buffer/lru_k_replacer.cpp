@@ -31,9 +31,11 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 
   for (auto it = greater_than_eq_k.begin(); it != greater_than_eq_k.end(); it++) {
     if ((*it)->IsEvictable()) {
-      *frame_id = (*it)->GetFrameId();
+      auto evict_frame_id = (*it)->GetFrameId();
+      *frame_id = evict_frame_id;
       greater_than_eq_k.erase(it);
-      greater_than_eq_k_map.erase(greater_than_eq_k_map.find((*it)->GetFrameId()));
+      auto delete_element = greater_than_eq_k_map.find(evict_frame_id);
+      greater_than_eq_k_map.erase(delete_element);
       curr_size_--;
       return true;
     }
@@ -66,10 +68,13 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
       less_than_k.erase(it);
       return;
     } else {
-      std::unique_ptr<Frame> entry = std::make_unique<Frame>(std::move(frame_id));
-      less_than_k_map.insert(
-          std::make_pair(std::move(frame_id), less_than_k.insert(less_than_k.end(), std::move(entry))));
-      return;
+      if (it == std::prev(less_than_k.end())) {
+        std::unique_ptr<Frame> entry = std::make_unique<Frame>(std::move(frame_id));
+        entry->IncrementUsedCnt();
+        less_than_k_map.insert(
+            std::make_pair(std::move(frame_id), less_than_k.insert(less_than_k.end(), std::move(entry))));
+        return;
+      }
     }
   }
 
@@ -101,13 +106,13 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 
   for (auto it = greater_than_eq_k.begin(); it != greater_than_eq_k.end(); it++) {
     if (frame_id == (*it)->GetFrameId()) {
-      (*it)->SetEvictable(set_evictable);
       if ((*it)->IsEvictable() && set_evictable == false) {
         curr_size_--;
       }
       if ((*it)->IsEvictable() == false && set_evictable) {
         curr_size_++;
       }
+      (*it)->SetEvictable(set_evictable);
       return;
     }
   }
