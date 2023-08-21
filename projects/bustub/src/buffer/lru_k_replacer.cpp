@@ -62,6 +62,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
         greater_than_eq_k_map.insert(std::make_pair(
             std::move(frame_id),
             greater_than_eq_k.insert(greater_than_eq_k.end(), std::make_unique<Frame>(std::move(*(*it).get())))));
+        less_than_k_map.erase(less_than_k_map.find(frame_id));
       } else {
         less_than_k.push_back(std::make_unique<Frame>(std::move(*(*it).get())));
       }
@@ -129,7 +130,7 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
         curr_size_--;
         return;
       }
-      BUSTUB_ASSERT((*it)->IsEvictable() != true, "Illegal operatrion: Remove on non-evictable frame!");
+      BUSTUB_ASSERT((*it)->IsEvictable(), "Illegal operatrion: Remove on non-evictable frame!");
     }
   }
 
@@ -141,7 +142,7 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
         curr_size_--;
         return;
       }
-      BUSTUB_ASSERT((*it)->IsEvictable() != true, "Illegal operatrion: Remove on non-evictable frame!");
+      BUSTUB_ASSERT((*it)->IsEvictable(), "Illegal operatrion: Remove on non-evictable frame!");
     }
   }
 }
