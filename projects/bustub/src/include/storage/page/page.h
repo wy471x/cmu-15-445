@@ -46,6 +46,10 @@ class Page {
     is_dirty_ = is_dirty;
   }
 
+  inline auto DecrementPinCount() -> void {
+    pin_count_--;
+  }
+
   /** @return the actual data contained within this page */
   inline auto GetData() -> char * { return data_; }
 
