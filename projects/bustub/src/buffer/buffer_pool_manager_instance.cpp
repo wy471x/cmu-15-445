@@ -48,6 +48,9 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
     *page_id = AllocatePage();
     page_table_->Insert(frame_id, *page_id);
     free_list_.pop_back();
+    replacer_->RecordAccess(frame_id);
+    replacer_->SetEvictable(frame_id, false);
+    pages_[frame_id].SetPinCount(1);
     return &pages_[frame_id];
   }
 
@@ -104,6 +107,7 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
 }
 
 auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> bool {
+  BUSTUB_ASSERT(page_id != INVALID_PAGE_ID, "Invalid page id!");
   frame_id_t frame_id;
 
   if (page_table_->Find(page_id, frame_id)) {
