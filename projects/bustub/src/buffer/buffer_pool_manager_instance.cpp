@@ -14,6 +14,7 @@
 
 #include "common/exception.h"
 #include "common/macros.h"
+#include "common/logger.h"
 
 namespace bustub {
 
@@ -90,7 +91,7 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
     disk_manager_->ReadPage(pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
     pages_[frame_id].SetPageId(page_id);
     pages_[frame_id].SetIsDirty(false);
-    pages_[frame_id].SetPinCount(0);
+    pages_[frame_id].SetPinCount(1);
     replacer_->RecordAccess(frame_id);
     replacer_->SetEvictable(frame_id, false);
     page_table_->Insert(page_id, frame_id);
@@ -101,13 +102,14 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
   if (replacer_->Size() != 0) {
     replacer_->Evict(&frame_id);
     if (pages_[frame_id].IsDirty()) {
+      LOG_INFO("#page %d data=%s", pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
       disk_manager_->WritePage(pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
     }
-    disk_manager_->ReadPage(pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
     page_table_->Remove(pages_[frame_id].GetPageId());
     pages_[frame_id].SetPageId(page_id);
     pages_[frame_id].SetIsDirty(false);
-    pages_[frame_id].SetPinCount(0);
+    pages_[frame_id].SetPinCount(1);
+    disk_manager_->ReadPage(pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
     replacer_->RecordAccess(frame_id);
     replacer_->SetEvictable(frame_id, false);
     page_table_->Insert(page_id, frame_id);

@@ -132,7 +132,7 @@ TEST(BufferPoolManagerInstanceTest, SampleTest) {
 
   // Scenario: We should be able to fetch the data we wrote a while ago.
   page0 = bpm->FetchPage(0);
-  LOG_INFO("#page 0 data = %s", page0->GetData());
+  LOG_INFO("#page %d data = %s", page0->GetPageId(), page0->GetData());
   EXPECT_EQ(0, strcmp(page0->GetData(), "Hello"));
 
   // Scenario: If we unpin page 0 and then make a new page, all the buffer pages should
