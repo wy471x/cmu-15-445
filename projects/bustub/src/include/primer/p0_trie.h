@@ -332,7 +332,7 @@ class Trie {
         if (cur->HasChild(key[i])) {
           // 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by
           // invoking the appropriate constructor.
-          auto terminal_node = dynamic_cast<TrieNodeWithValue <T> *>((*cur->GetChildNode(key[i])).get());
+          auto terminal_node = dynamic_cast<TrieNodeWithValue<T> *>((*cur->GetChildNode(key[i])).get());
           if (terminal_node == nullptr) {
             TrieNodeWithValue<T> node(std::move(*(*cur->GetChildNode(key[i]))), value);
             std::unique_ptr<TrieNodeWithValue<T>> new_node_ptr(new TrieNodeWithValue<T>(std::move(node), value));

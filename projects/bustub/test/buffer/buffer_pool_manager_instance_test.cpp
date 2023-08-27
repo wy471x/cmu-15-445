@@ -17,8 +17,8 @@
 #include <string>
 
 #include "buffer/buffer_pool_manager.h"
-#include "gtest/gtest.h"
 #include "common/logger.h"
+#include "gtest/gtest.h"
 
 namespace bustub {
 

@@ -66,7 +66,7 @@ class ExtendibleHashTable : public HashTable<K, V> {
   /**
    * @brief Increment depth of the global.
    * @return The depth of global.
-  */
+   */
   void IncrementGlobalDepth();
 
   /**
@@ -195,7 +195,8 @@ class ExtendibleHashTable : public HashTable<K, V> {
    */
   auto RedistributeBucket(std::shared_ptr<Bucket> bucket) -> void;
 
-  auto RehashDirectoryPointers(std::shared_ptr<Bucket> first, std::shared_ptr<Bucket> second, size_t index, int local_depth, int global_depth) -> void;
+  auto RehashDirectoryPointers(std::shared_ptr<Bucket> first, std::shared_ptr<Bucket> second, size_t index,
+                               int local_depth, int global_depth) -> void;
 
   auto SplitAndRehash(std::shared_ptr<Bucket> bucket, size_t index, int local_depth, int global_depth) -> void;
 

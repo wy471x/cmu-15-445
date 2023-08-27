@@ -36,19 +36,13 @@ class Page {
   /** Default destructor. */
   ~Page() = default;
 
-  inline auto SetPageId(page_id_t page_id) -> void { page_id_ = page_id; }
+  // inline auto SetPageId(page_id_t page_id) -> void { page_id_ = page_id; }
 
-  inline auto SetPinCount(int pin_count) -> void {
-    pin_count_ = pin_count;
-  }
+  // inline auto SetPinCount(int pin_count) -> void { pin_count_ = pin_count; }
 
-  inline auto SetIsDirty(int is_dirty) -> void {
-    is_dirty_ = is_dirty;
-  }
+  // inline auto SetIsDirty(bool is_dirty) -> void { is_dirty_ = is_dirty; }
 
-  inline auto DecrementPinCount() -> void {
-    pin_count_--;
-  }
+  // inline auto DecrementPinCount() -> void { pin_count_--; }
 
   /** @return the actual data contained within this page */
   inline auto GetData() -> char * { return data_; }

@@ -13,8 +13,8 @@
 #include "buffer/buffer_pool_manager_instance.h"
 
 #include "common/exception.h"
-#include "common/macros.h"
 #include "common/logger.h"
+#include "common/macros.h"
 
 namespace bustub {
 
@@ -35,6 +35,7 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   // throw NotImplementedException(
   //     "BufferPoolManager is not implemented yet. If you have finished implementing BPM, please remove the throw "
   //     "exception line in `buffer_pool_manager_instance.cpp`.");
+  // system("cat /autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp");
 }
 
 BufferPoolManagerInstance::~BufferPoolManagerInstance() {
@@ -51,8 +52,8 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
     free_list_.pop_front();
     replacer_->RecordAccess(frame_id);
     replacer_->SetEvictable(frame_id, false);
-    pages_[frame_id].SetPinCount(1);
-    pages_[frame_id].SetPageId(*page_id);
+    pages_[frame_id].pin_count_ = 1;
+    pages_[frame_id].page_id_ = *page_id;
     return &pages_[frame_id];
   }
 
@@ -65,9 +66,9 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
     auto remove_page_id = pages_[frame_id].GetPageId();
     page_table_->Remove(remove_page_id);
     *page_id = AllocatePage();
-    pages_[frame_id].SetPageId(*page_id);
-    pages_[frame_id].SetIsDirty(false);
-    pages_[frame_id].SetPinCount(1);
+    pages_[frame_id].page_id_ = *page_id;
+    pages_[frame_id].is_dirty_ = false;
+    pages_[frame_id].pin_count_ = 1;
     replacer_->RecordAccess(frame_id);
     replacer_->SetEvictable(frame_id, false);
     page_table_->Insert(*page_id, frame_id);
@@ -82,16 +83,16 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
   if (page_table_->Find(page_id, frame_id)) {
     replacer_->RecordAccess(frame_id);
     replacer_->SetEvictable(frame_id, true);
-    pages_[frame_id].SetPinCount(pages_[frame_id].GetPinCount() + 1);
+    pages_[frame_id].pin_count_ = pages_[frame_id].GetPinCount() + 1;
     return &pages_[frame_id];
   }
 
   if (!free_list_.empty()) {
     frame_id = free_list_.front();
     disk_manager_->ReadPage(pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
-    pages_[frame_id].SetPageId(page_id);
-    pages_[frame_id].SetIsDirty(false);
-    pages_[frame_id].SetPinCount(1);
+    pages_[frame_id].page_id_ = page_id;
+    pages_[frame_id].is_dirty_ = false;
+    pages_[frame_id].pin_count_ = 1;
     replacer_->RecordAccess(frame_id);
     replacer_->SetEvictable(frame_id, false);
     page_table_->Insert(page_id, frame_id);
@@ -106,9 +107,9 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
       disk_manager_->WritePage(pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
     }
     page_table_->Remove(pages_[frame_id].GetPageId());
-    pages_[frame_id].SetPageId(page_id);
-    pages_[frame_id].SetIsDirty(false);
-    pages_[frame_id].SetPinCount(1);
+    pages_[frame_id].page_id_ = page_id;
+    pages_[frame_id].is_dirty_ = false;
+    pages_[frame_id].pin_count_ = 1;
     disk_manager_->ReadPage(pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
     replacer_->RecordAccess(frame_id);
     replacer_->SetEvictable(frame_id, false);
@@ -125,11 +126,11 @@ auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> 
 
   if (page_table_->Find(page_id, frame_id)) {
     if (pages_[frame_id].GetPinCount() > 0) {
-      pages_[frame_id].DecrementPinCount();
+      pages_[frame_id].pin_count_--;
       if (pages_[frame_id].GetPinCount() <= 0) {
         replacer_->SetEvictable(frame_id, true);
         if (is_dirty) {
-          pages_[frame_id].SetIsDirty(is_dirty);
+          pages_[frame_id].is_dirty_ = is_dirty;
         }
       }
       return true;
@@ -145,7 +146,7 @@ auto BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) -> bool {
   frame_id_t frame_id;
   if (page_table_->Find(page_id, frame_id)) {
     disk_manager_->WritePage(pages_[frame_id].GetPageId(), pages_[frame_id].GetData());
-    pages_[frame_id].SetIsDirty(false);
+    pages_[frame_id].is_dirty_ = false;
     return true;
   }
   return false;
@@ -154,7 +155,7 @@ auto BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) -> bool {
 void BufferPoolManagerInstance::FlushAllPgsImp() {
   for (size_t i = 0; i < pool_size_; i++) {
     disk_manager_->WritePage(pages_[i].GetPageId(), pages_[i].GetData());
-    pages_[i].SetIsDirty(false);
+    pages_[i].is_dirty_ = false;
   }
 }
 
