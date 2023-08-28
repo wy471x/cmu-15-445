@@ -184,7 +184,7 @@ class ExtendibleHashTable : public HashTable<K, V> {
   int global_depth_;    // The global depth of the directory
   size_t bucket_size_;  // The size of a bucket
   int num_buckets_;     // The number of buckets in the hash table
-  mutable std::mutex latch_;
+  mutable std::recursive_mutex latch_;
   std::vector<std::shared_ptr<Bucket>> dir_;  // The directory of the hash table
 
   // The following functions are completely optional, you can delete them if you have your own ideas.
@@ -200,6 +200,7 @@ class ExtendibleHashTable : public HashTable<K, V> {
 
   auto SplitAndRehash(std::shared_ptr<Bucket> bucket, size_t index, int local_depth, int global_depth) -> void;
 
+  auto GetSpecifiedBit(size_t n, int k) -> int;
   /*****************************************************************
    * Must acquire latch_ first before calling the below functions. *
    *****************************************************************/

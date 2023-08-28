@@ -39,7 +39,7 @@ auto ExtendibleHashTable<K, V>::IndexOf(const K &key) -> size_t {
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::GetGlobalDepth() const -> int {
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::scoped_lock<std::recursive_mutex> lock(latch_);
   return GetGlobalDepthInternal();
 }
 
@@ -50,7 +50,7 @@ auto ExtendibleHashTable<K, V>::GetGlobalDepthInternal() const -> int {
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::GetLocalDepth(int dir_index) const -> int {
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::scoped_lock<std::recursive_mutex> lock(latch_);
   return GetLocalDepthInternal(dir_index);
 }
 
@@ -61,7 +61,7 @@ auto ExtendibleHashTable<K, V>::GetLocalDepthInternal(int dir_index) const -> in
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::GetNumBuckets() const -> int {
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::scoped_lock<std::recursive_mutex> lock(latch_);
   return GetNumBucketsInternal();
 }
 
@@ -107,7 +107,7 @@ auto ExtendibleHashTable<K, V>::RehashDirectoryPointers(std::shared_ptr<Bucket> 
   size_t dir_size = GetDirectoryNum();
   for (size_t i = 0; i < dir_size; i++) {
     if (dir_[i] == old_bucket) {
-      auto specified_bit = (1 << i) & local_depth;
+      auto specified_bit = GetSpecifiedBit(i, local_depth);
       if (specified_bit == 0) {
         dir_[i] = first;
       } else {
@@ -115,6 +115,11 @@ auto ExtendibleHashTable<K, V>::RehashDirectoryPointers(std::shared_ptr<Bucket> 
       }
     }
   }
+}
+
+template <typename K, typename V>
+auto ExtendibleHashTable<K, V>::GetSpecifiedBit(size_t n, int k) -> int{
+  return (n >> k) & 1;
 }
 
 template <typename K, typename V>
@@ -130,7 +135,7 @@ auto ExtendibleHashTable<K, V>::SplitAndRehash(std::shared_ptr<Bucket> bucket, s
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::Find(const K &key, V &value) -> bool {
   // UNREACHABLE("not implemented");
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::scoped_lock<std::recursive_mutex> lock(latch_);
   auto directory_index = IndexOf(key);
   std::shared_ptr<Bucket> index_bucket = dir_[directory_index];
   if (index_bucket != nullptr) {
@@ -142,7 +147,7 @@ auto ExtendibleHashTable<K, V>::Find(const K &key, V &value) -> bool {
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::Remove(const K &key) -> bool {
   // UNREACHABLE("not implemented");
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::scoped_lock<std::recursive_mutex> lock(latch_);
   auto directory_index = IndexOf(key);
   std::shared_ptr<Bucket> index_bucket = dir_[directory_index];
   if (index_bucket != nullptr) {
@@ -154,7 +159,7 @@ auto ExtendibleHashTable<K, V>::Remove(const K &key) -> bool {
 template <typename K, typename V>
 void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
   // UNREACHABLE("not implemented");
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::scoped_lock<std::recursive_mutex> lock(latch_);
   auto dir_index = IndexOf(key);
   auto indexed_bucket = dir_[dir_index];
   auto inserted = indexed_bucket->Insert(key, value);
@@ -178,7 +183,7 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
   }
 
   num_buckets_++;
-  latch_.unlock();
+  // latch_.unlock();
   Insert(key, value);
 }
 
