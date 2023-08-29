@@ -18,6 +18,7 @@
 #include <mutex>  // NOLINT
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 #include "common/config.h"
 #include "common/macros.h"
@@ -137,16 +138,15 @@ class LRUKReplacer {
    public:
     explicit Frame(frame_id_t frame_id) {
       frame_id_ = frame_id;
-      evictable_ = false;
+      evictable_ = true;
       used_cnt_ = 0;
-      access_timestamp_ = 0;
     }
 
     Frame(Frame &&frame) noexcept {
       frame_id_ = frame.frame_id_;
       used_cnt_ = frame.used_cnt_;
       evictable_ = frame.evictable_;
-      access_timestamp_ = frame.access_timestamp_;
+      access_timestamps_ = frame.access_timestamps_;
     }
 
     inline auto GetUsedCnt() const -> size_t { return used_cnt_; }
@@ -157,21 +157,23 @@ class LRUKReplacer {
 
     inline auto GetFrameId() const -> frame_id_t { return frame_id_; }
 
-    inline auto SetAccessTimestamp(size_t current_timestamp) -> void { access_timestamp_ = current_timestamp; }
-
     inline auto IncrementUsedCnt() -> void { used_cnt_++; }
+
+    inline auto recordCurrTimestamp(size_t curr_timestamp) -> void {
+      access_timestamps_.push_back(curr_timestamp);
+    }
 
    private:
     size_t used_cnt_;
     bool evictable_;
     frame_id_t frame_id_;
-    size_t access_timestamp_;
+    std::list<size_t> access_timestamps_;
   };
 
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  // size_t current_timestamp_{0};
+  size_t current_timestamp_{0};
   size_t curr_size_{0};
   size_t replacer_size_;
   size_t k_;

@@ -46,13 +46,16 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
-  BUSTUB_ASSERT(frame_id < (signed)replacer_size_, "Invalid frame id!");
+  BUSTUB_ASSERT(frame_id <= (signed)replacer_size_, "Invalid frame id!");
 
   // if replacer is empty.
-  if (curr_size_ <= 0) {
+  if (less_than_k_map_.find(frame_id) == less_than_k_map_.end() &&
+      greater_than_eq_k_map_.find(frame_id) == greater_than_eq_k_map_.end()) {
     std::unique_ptr<Frame> entry = std::make_unique<Frame>(frame_id);
     entry->IncrementUsedCnt();
+    entry->recordCurrTimestamp(current_timestamp_++);
     less_than_k_map_.insert(std::make_pair(frame_id, less_than_k_.insert(less_than_k_.end(), std::move(entry))));
+    curr_size_++;
     return;
   }
 
