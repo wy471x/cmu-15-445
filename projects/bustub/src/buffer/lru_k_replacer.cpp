@@ -18,135 +18,41 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
   // system("cat /autograder/source/bustub/test/buffer/grading_lru_k_replacer_test.cpp");
 }
 
-auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
-  for (auto it = less_than_k_.begin(); it != less_than_k_.end(); it++) {
-    if ((*it)->IsEvictable()) {
-      auto evict_frame_id = (*it)->GetFrameId();
-      *frame_id = evict_frame_id;
-      less_than_k_.erase(it);
-      auto delete_element = less_than_k_map_.find(evict_frame_id);
-      less_than_k_map_.erase(delete_element);
-      curr_size_--;
-      return true;
-    }
-  }
-
-  for (auto it = greater_than_eq_k_.begin(); it != greater_than_eq_k_.end(); it++) {
-    if ((*it)->IsEvictable()) {
-      auto evict_frame_id = (*it)->GetFrameId();
-      *frame_id = evict_frame_id;
-      greater_than_eq_k_.erase(it);
-      auto delete_element = greater_than_eq_k_map_.find(evict_frame_id);
-      greater_than_eq_k_map_.erase(delete_element);
-      curr_size_--;
-      return true;
-    }
-  }
-  return false;
-}
+auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool { return false; }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   BUSTUB_ASSERT(frame_id <= (signed)replacer_size_, "Invalid frame id!");
 
-  // if replacer is empty.
   if (less_than_k_map_.find(frame_id) == less_than_k_map_.end() &&
       greater_than_eq_k_map_.find(frame_id) == greater_than_eq_k_map_.end()) {
-    std::unique_ptr<Frame> entry = std::make_unique<Frame>(frame_id);
+    auto entry = std::make_unique<bustub::LRUKReplacer::Frame>(frame_id);
     entry->IncrementUsedCnt();
     entry->recordCurrTimestamp(current_timestamp_++);
-    less_than_k_map_.insert(std::make_pair(frame_id, less_than_k_.insert(less_than_k_.end(), std::move(entry))));
+    less_than_k_.push_back(entry);
     curr_size_++;
-    return;
   }
 
-  for (auto it = less_than_k_.begin(); it != less_than_k_.end(); it++) {
-    if (frame_id == (*it)->GetFrameId()) {
-      (*it)->IncrementUsedCnt();
-      if ((*it)->GetUsedCnt() >= k_) {
-        greater_than_eq_k_map_.insert(std::make_pair(
-            frame_id,
-            greater_than_eq_k_.insert(greater_than_eq_k_.end(), std::make_unique<Frame>(std::move(*(it->get()))))));
-        less_than_k_map_.erase(less_than_k_map_.find(frame_id));
-      } else {
-        less_than_k_.push_back(std::make_unique<Frame>(std::move(*(it->get()))));
-      }
-      less_than_k_.erase(it);
-      return;
-    }
-    if (it == std::prev(less_than_k_.end())) {
-      std::unique_ptr<Frame> entry = std::make_unique<Frame>(frame_id);
-      entry->IncrementUsedCnt();
-      less_than_k_map_.insert(std::make_pair(frame_id, less_than_k_.insert(less_than_k_.end(), std::move(entry))));
-      return;
-    }
-  }
-
-  for (auto it = greater_than_eq_k_.begin(); it != greater_than_eq_k_.end(); it++) {
-    if (frame_id == (*it)->GetFrameId()) {
-      (*it)->IncrementUsedCnt();
-      greater_than_eq_k_.push_back(std::make_unique<Frame>(std::move(*(it->get()))));
-      greater_than_eq_k_.erase(it);
-      return;
+  auto find_iter = less_than_k_map_.find(frame_id);
+  if (find_iter != less_than_k_map_.end()) {
+    auto insert_element = std::make_unique<bustub::LRUKReplacer::Frame>(find_iter->second);
+    insert_element->recordCurrTimestamp(current_timestamp_++);
+    insert_element->IncrementUsedCnt();
+    if (insert_element->GetUsedCnt() >= k_) {
+      // todo: update
+    } else {
+      less_than_k_.push_back(insert_element);
+      less_than_k_.erase(find_iter->second);
+      less_than_k_map_[frame_id] = std::prev(less_than_k_.end());
     }
   }
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   BUSTUB_ASSERT(frame_id < (signed)replacer_size_, "Invalid frame id!");
-
-  for (auto &it : less_than_k_) {
-    if (frame_id == it->GetFrameId()) {
-      if (it->IsEvictable() && !set_evictable) {
-        curr_size_--;
-      }
-      if (!it->IsEvictable() && set_evictable) {
-        curr_size_++;
-      }
-      it->SetEvictable(set_evictable);
-      return;
-    }
-  }
-
-  for (auto &it : greater_than_eq_k_) {
-    if (frame_id == it->GetFrameId()) {
-      if (it->IsEvictable() && !set_evictable) {
-        curr_size_--;
-      }
-      if (!it->IsEvictable() && set_evictable) {
-        curr_size_++;
-      }
-      it->SetEvictable(set_evictable);
-      return;
-    }
-  }
 }
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
   BUSTUB_ASSERT(frame_id < (signed)replacer_size_, "Invalid frame id!");
-
-  for (auto it = less_than_k_.begin(); it != less_than_k_.end(); it++) {
-    if (frame_id == (*it)->GetFrameId()) {
-      if ((*it)->IsEvictable()) {
-        less_than_k_.erase(it);
-        less_than_k_map_.erase(less_than_k_map_.find(frame_id));
-        curr_size_--;
-        return;
-      }
-      BUSTUB_ASSERT((*it)->IsEvictable(), "Illegal operatrion: Remove on non-evictable frame!");
-    }
-  }
-
-  for (auto it = greater_than_eq_k_.begin(); it != greater_than_eq_k_.end(); it++) {
-    if (frame_id == (*it)->GetFrameId()) {
-      if ((*it)->IsEvictable()) {
-        greater_than_eq_k_.erase(it);
-        greater_than_eq_k_map_.erase(greater_than_eq_k_map_.find(frame_id));
-        curr_size_--;
-        return;
-      }
-      BUSTUB_ASSERT((*it)->IsEvictable(), "Illegal operatrion: Remove on non-evictable frame!");
-    }
-  }
 }
 
 auto LRUKReplacer::Size() -> size_t { return curr_size_; }
