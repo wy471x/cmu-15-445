@@ -159,15 +159,19 @@ class LRUKReplacer {
 
     inline auto IncrementUsedCnt() -> void { used_cnt_++; }
 
-    inline auto recordCurrTimestamp(size_t curr_timestamp) -> void {
+    inline auto RecordCurrTimestamp(size_t curr_timestamp) -> void {
       access_timestamps_.push_back(curr_timestamp);
+    }
+
+    inline auto GetKthTimestamp(size_t k) {
+      return access_timestamps_[access_timestamps_.size() - k];
     }
 
    private:
     size_t used_cnt_;
     bool evictable_;
     frame_id_t frame_id_;
-    std::list<size_t> access_timestamps_;
+    std::vector<size_t> access_timestamps_;
   };
 
  private:
