@@ -12,13 +12,13 @@
 
 #pragma once
 
+#include <algorithm>
 #include <limits>
 #include <list>
 #include <memory>
 #include <mutex>  // NOLINT
 #include <unordered_map>
 #include <vector>
-#include <algorithm>
 
 #include "common/config.h"
 #include "common/macros.h"
@@ -159,13 +159,9 @@ class LRUKReplacer {
 
     inline auto IncrementUsedCnt() -> void { used_cnt_++; }
 
-    inline auto RecordCurrTimestamp(size_t curr_timestamp) -> void {
-      access_timestamps_.push_back(curr_timestamp);
-    }
+    inline auto RecordCurrTimestamp(size_t curr_timestamp) -> void { access_timestamps_.push_back(curr_timestamp); }
 
-    inline auto GetKthTimestamp(size_t k) {
-      return access_timestamps_[access_timestamps_.size() - k];
-    }
+    inline auto GetKthTimestamp(size_t k) { return access_timestamps_[access_timestamps_.size() - k]; }
 
    private:
     size_t used_cnt_;

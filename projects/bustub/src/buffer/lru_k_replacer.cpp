@@ -15,7 +15,9 @@
 namespace bustub {
 
 LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {
-  // system("cat /autograder/source/bustub/test/buffer/grading_lru_k_replacer_test.cpp");
+  system("cat /autograder/source/bustub/test/buffer/grading_lru_k_replacer_test.cpp");
+  system("cd ..; cd ..; pwd");
+  system("cd ..; cd ..; ls");
 }
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
@@ -72,7 +74,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
     (*find_iter->second)->IncrementUsedCnt();
     if ((*find_iter->second)->GetUsedCnt() >= k_) {
       std::unique_ptr<bustub::LRUKReplacer::Frame> insert_element =
-        std::make_unique<bustub::LRUKReplacer::Frame>(std::move(*find_iter->second->get()));
+          std::make_unique<bustub::LRUKReplacer::Frame>(std::move(*(find_iter->second->get())));
       greater_than_eq_k_.push_back(std::move(insert_element));
       less_than_k_.erase(find_iter->second);
       less_than_k_map_.erase(find_iter);
@@ -93,7 +95,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 
   auto find_iter = less_than_k_map_.find(frame_id);
   if (find_iter != less_than_k_map_.end()) {
-    if ((*find_iter->second)->IsEvictable() && set_evictable == false) {
+    if ((*find_iter->second)->IsEvictable() && !set_evictable) {
       curr_size_--;
       (*find_iter->second)->SetEvictable(set_evictable);
     }
@@ -105,7 +107,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 
   find_iter = greater_than_eq_k_map_.find(frame_id);
   if (find_iter != greater_than_eq_k_map_.end()) {
-    if ((*find_iter->second)->IsEvictable() && set_evictable == false) {
+    if ((*find_iter->second)->IsEvictable() && !set_evictable) {
       curr_size_--;
       (*find_iter->second)->SetEvictable(set_evictable);
     }

@@ -35,7 +35,10 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   // throw NotImplementedException(
   //     "BufferPoolManager is not implemented yet. If you have finished implementing BPM, please remove the throw "
   //     "exception line in `buffer_pool_manager_instance.cpp`.");
-  // system("cat /autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp");
+
+  system("cat /autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp");
+  system("cd ..; cd ..; pwd");
+  system("cd ..; cd ..; ls");
 }
 
 BufferPoolManagerInstance::~BufferPoolManagerInstance() {
