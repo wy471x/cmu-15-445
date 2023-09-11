@@ -136,38 +136,24 @@ class LRUKReplacer {
 
   class Frame {
    public:
-    explicit Frame(frame_id_t frame_id) {
-      frame_id_ = frame_id;
-      evictable_ = true;
-      used_cnt_ = 0;
+    Frame(std::list<frame_id_t>::iterator iter, size_t timestamp) : iter_(iter) {
+      timestamp_list_.emplace_back(timestamp);
     }
 
-    Frame(Frame &&frame) noexcept {
-      frame_id_ = frame.frame_id_;
-      used_cnt_ = frame.used_cnt_;
-      evictable_ = frame.evictable_;
-      access_timestamps_ = frame.access_timestamps_;
+    inline auto IncrementUsedCnt() -> void {
+      used_cnt_++;
     }
 
-    inline auto GetUsedCnt() const -> size_t { return used_cnt_; }
-
-    inline auto SetEvictable(bool evictable) -> void { evictable_ = evictable; }
-
-    inline auto IsEvictable() -> bool { return evictable_; }
-
-    inline auto GetFrameId() const -> frame_id_t { return frame_id_; }
-
-    inline auto IncrementUsedCnt() -> void { used_cnt_++; }
-
-    inline auto RecordCurrTimestamp(size_t curr_timestamp) -> void { access_timestamps_.push_back(curr_timestamp); }
-
-    inline auto GetKthTimestamp(size_t k) { return access_timestamps_[access_timestamps_.size() - k]; }
+    inline auto SetEvictable(bool evictable) -> void {
+      evictable_ = evictable;
+    }
 
    private:
-    size_t used_cnt_;
-    bool evictable_;
+    size_t used_cnt_{1};
+    bool evictable_{true};
     frame_id_t frame_id_;
-    std::vector<size_t> access_timestamps_;
+    std::list<size_t> timestamp_list_;
+    std::list<frame_id_t>::iterator iter_; 
   };
 
  private:
