@@ -148,10 +148,33 @@ class LRUKReplacer {
       evictable_ = evictable;
     }
 
+    inline auto IsEvictable() -> bool {
+      return evictable_;
+    }
+
+    inline auto GetUsedCnt() -> size_t {
+      return used_cnt_;
+    }
+
+    inline auto recordTimestamp(size_t timestamp) -> void {
+      timestamp_list_.push_back(timestamp);
+    }
+
+    inline auto GetIterator() -> std::list<frame_id_t>::iterator {
+      return iter_;
+    }
+
+    inline auto SetIterator(std::list<frame_id_t>::iterator iter) -> void {
+      iter_ = iter;
+    }
+
+    inline auto GetTimestampList() -> std::list<size_t> {
+      return timestamp_list_;
+    }
+
    private:
     size_t used_cnt_{1};
     bool evictable_{true};
-    frame_id_t frame_id_;
     std::list<size_t> timestamp_list_;
     std::list<frame_id_t>::iterator iter_; 
   };
@@ -164,11 +187,14 @@ class LRUKReplacer {
   size_t replacer_size_;
   size_t k_;
   std::mutex latch_;
-  std::list<std::unique_ptr<bustub::LRUKReplacer::Frame>> greater_than_eq_k_;
-  std::list<std::unique_ptr<bustub::LRUKReplacer::Frame>> less_than_k_;
-  std::unordered_map<frame_id_t, std::list<std::unique_ptr<bustub::LRUKReplacer::Frame>>::iterator>
-      greater_than_eq_k_map_;
-  std::unordered_map<frame_id_t, std::list<std::unique_ptr<bustub::LRUKReplacer::Frame>>::iterator> less_than_k_map_;
+
+  // history queue
+  std::list<frame_id_t> history_list_;
+  // cache queue
+  std::list<frame_id_t> cache_list_;
+  // frame id map
+  std::unordered_map<frame_id_t, Frame> id_frame_map_;
+  
 };
 
 }  // namespace bustub
