@@ -18,6 +18,7 @@
 #include <memory>
 #include <mutex>  // NOLINT
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "common/config.h"
@@ -136,47 +137,38 @@ class LRUKReplacer {
 
   class Frame {
    public:
-    Frame(std::list<frame_id_t>::iterator iter, size_t timestamp) : iter_(iter) {
-      timestamp_list_.emplace_back(timestamp);
+    Frame(std::list<frame_id_t>::iterator iter, frame_id_t id, size_t current_timestamp) : id_(id), iter_(iter) {
+      timestamp_list_.push_back(current_timestamp);
     }
 
-    inline auto IncrementUsedCnt() -> void {
-      used_cnt_++;
+    inline auto IncrementUsedCnt() -> void { used_cnt_++; }
+
+    inline auto SetEvictable(bool evictable) -> void { evictable_ = evictable; }
+
+    inline auto IsEvictable() -> bool { return evictable_; }
+
+    inline auto GetUsedCnt() -> size_t { return used_cnt_; }
+
+    inline auto RecordTimestamp(size_t timestamp) -> void { timestamp_list_.push_back(timestamp); }
+
+    inline auto GetIterator() -> std::list<frame_id_t>::iterator { return iter_; }
+
+    inline auto SetIterator(std::list<frame_id_t>::iterator iter) -> void { iter_ = iter; }
+
+    inline auto GetTimestampList() -> std::list<size_t> { return timestamp_list_; }
+
+    inline auto SetTimestampList(std::list<size_t> timestamp_list) -> void {
+      timestamp_list_ = std::move(timestamp_list);
     }
 
-    inline auto SetEvictable(bool evictable) -> void {
-      evictable_ = evictable;
-    }
-
-    inline auto IsEvictable() -> bool {
-      return evictable_;
-    }
-
-    inline auto GetUsedCnt() -> size_t {
-      return used_cnt_;
-    }
-
-    inline auto recordTimestamp(size_t timestamp) -> void {
-      timestamp_list_.push_back(timestamp);
-    }
-
-    inline auto GetIterator() -> std::list<frame_id_t>::iterator {
-      return iter_;
-    }
-
-    inline auto SetIterator(std::list<frame_id_t>::iterator iter) -> void {
-      iter_ = iter;
-    }
-
-    inline auto GetTimestampList() -> std::list<size_t> {
-      return timestamp_list_;
-    }
+    inline auto GetFrameId() -> frame_id_t { return id_; }
 
    private:
     size_t used_cnt_{1};
     bool evictable_{true};
+    frame_id_t id_;
     std::list<size_t> timestamp_list_;
-    std::list<frame_id_t>::iterator iter_; 
+    std::list<frame_id_t>::iterator iter_;
   };
 
  private:
@@ -194,7 +186,6 @@ class LRUKReplacer {
   std::list<frame_id_t> cache_list_;
   // frame id map
   std::unordered_map<frame_id_t, Frame> id_frame_map_;
-  
 };
 
 }  // namespace bustub

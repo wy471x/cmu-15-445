@@ -64,7 +64,6 @@ TEST(ExtendibleHashTableTest, InsertAndReplaceTest) {
   std::string replace;
   table->Find(1, replace);
   EXPECT_EQ("e", replace);
-
 }
 
 // TEST(ExtendibleHashTableTest, DISABLED_ConcurrentInsertTest) {
@@ -264,6 +263,5 @@ TEST(ExtendibleHashTableTest, GetNumBucketsTest1) {
 
   EXPECT_EQ(8, table->GetNumBuckets());
 }
-
 
 }  // namespace bustub

@@ -14,10 +14,11 @@
 
 namespace bustub {
 
-LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {
-}
+LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
+  std::scoped_lock<std::mutex> lock(latch_);
+
   if (curr_size_ <= 0) {
     return false;
   }
@@ -50,21 +51,21 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
+  std::scoped_lock<std::mutex> lock(latch_);
   BUSTUB_ASSERT(frame_id <= (signed)replacer_size_, "Invalid frame id!");
 
   auto cur_element = id_frame_map_.find(frame_id);
   if (cur_element == id_frame_map_.end()) {
     history_list_.emplace_back(frame_id);
-    Frame new_frame(std::prev(history_list_.end()), current_timestamp_);
-    id_frame_map_.emplace(frame_id, new_frame);
+    id_frame_map_.insert(std::make_pair(frame_id, Frame(std::prev(history_list_.end()), frame_id, current_timestamp_)));
     curr_size_++;
   } else {
     cur_element->second.IncrementUsedCnt();
 
     if (cur_element->second.GetUsedCnt() < k_) {
-      cur_element->second.recordTimestamp(current_timestamp_);
+      cur_element->second.RecordTimestamp(current_timestamp_);
     } else if (cur_element->second.GetUsedCnt() == k_) {
-      cur_element->second.recordTimestamp(current_timestamp_);
+      cur_element->second.RecordTimestamp(current_timestamp_);
       history_list_.erase(cur_element->second.GetIterator());
       size_t k_timestamp = cur_element->second.GetTimestampList().front();
       auto iter = cache_list_.begin();
@@ -73,8 +74,10 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
       }
       cur_element->second.SetIterator(cache_list_.insert(iter, frame_id));
     } else {
-      cur_element->second.GetTimestampList().pop_front();
-      cur_element->second.recordTimestamp(current_timestamp_);
+      auto timestamp_list = cur_element->second.GetTimestampList();
+      timestamp_list.pop_front();
+      cur_element->second.SetTimestampList(timestamp_list);
+      cur_element->second.RecordTimestamp(current_timestamp_);
 
       cache_list_.erase(cur_element->second.GetIterator());
       size_t k_timestamp = cur_element->second.GetTimestampList().front();
@@ -85,11 +88,11 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
       cur_element->second.SetIterator(cache_list_.insert(iter, frame_id));
     }
   }
-  
   current_timestamp_++;
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
+  std::scoped_lock<std::mutex> lock(latch_);
   BUSTUB_ASSERT(frame_id < (signed)replacer_size_, "Invalid frame id!");
 
   auto cur_element = id_frame_map_.find(frame_id);
@@ -108,6 +111,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 }
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
+  std::scoped_lock<std::mutex> lock(latch_);
   BUSTUB_ASSERT(frame_id < (signed)replacer_size_, "Invalid frame id!");
 
   auto cur_element = id_frame_map_.find(frame_id);
