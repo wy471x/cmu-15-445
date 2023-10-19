@@ -52,7 +52,19 @@ void BPlusTreePage::SetMaxSize(int size) { max_size_ = size; }
  * Helper method to get min page size
  * Generally, min page size == max page size / 2
  */
-auto BPlusTreePage::GetMinSize() const -> int { return max_size_ / 2; }
+auto BPlusTreePage::GetMinSize() const -> int { 
+    // if cur page is root page.
+    if (IsRootPage()) {
+        return IsLeafPage() ? 1 : 2;
+    } 
+
+    // if cur page is leaf page.
+    if (IsLeafPage()) {
+        return std::ceil(max_size_ - 1 / 2);
+    }
+
+    return std::ceil(max_size_ / 2) - 1;
+}
 
 /*
  * Helper methods to get/set parent page id
