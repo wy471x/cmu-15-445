@@ -38,12 +38,29 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
   auto cur_node = reinterpret_cast<BPlusTreePage *>(cur_page->GetData());
   while (!cur_node->IsLeafPage())
   {
-    auto value = BinarySearch(key, 0, cur_node->GetSize() - 1);
+    auto internal_node = reinterpret_cast<BPlusTreeInternalPage *>(cur_node);
+    auto target_pair_index = BinarySearch(key, internal_node);
+    internal_node->ValueAt(target_pair_index);
   }
   
-  
-  
   return false;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::BinarySearch(const KeyType &key, InternalPage *node) {
+  // null key in the head.
+  int i = 1, j = node->GetSize() - 1
+  for (; i <= j;) {
+    int mid = i + (j - i) / 2;
+    if (comparator_(key, node->KeyAt(mid)) > 0) {
+      i = mid + 1;
+    } else if (comparator_(key, node->KeyAt(mid)) < 0) {
+      j = mid - 1;
+    } else {
+      return mid;
+    }
+  }
+  return i - 1;
 }
 
 /*****************************************************************************
