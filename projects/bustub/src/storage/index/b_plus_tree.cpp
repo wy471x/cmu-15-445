@@ -40,9 +40,25 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
   {
     auto internal_node = reinterpret_cast<BPlusTreeInternalPage *>(cur_node);
     auto target_pair_index = BinarySearch(key, internal_node);
-    internal_node->ValueAt(target_pair_index);
+    // auto page_id = internal_node->ValueAt(target_pair_index);
+    buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+    cur_page = buffer_pool_manager_->FetchPage(internal_node->ValueAt(target_pair_index));
+    cur_node = reinterpret_cast<BPlusTreePage *>(cur_page->GetData());
   }
-  
+
+  // search all values associated with key.
+  auto leaf_node = reinterpret_cast<BPlusTreeLeafPage *>(cur_page->GetData());
+  for (int i = 0; i < leaf_node->GetSize(); i++) {
+    if (comparator_(key, leaf_node->KeyAt(i)) == 0) {
+      result->push_back(leaf_node->ValueAt(i));
+    }
+  }
+  buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+  if (result->size() > 0) {
+    return true;
+  }
+
+  // key is not exists.
   return false;
 }
 
