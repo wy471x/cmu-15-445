@@ -40,6 +40,10 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
   {
     auto internal_node = reinterpret_cast<BPlusTreeInternalPage *>(cur_node);
     auto target_pair_index = BinarySearch(key, internal_node);
+    // searched key not exists.
+    if (target_pair_index < 0) {
+      return false;
+    }
     // auto page_id = internal_node->ValueAt(target_pair_index);
     buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
     cur_page = buffer_pool_manager_->FetchPage(internal_node->ValueAt(target_pair_index));
@@ -65,7 +69,7 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::BinarySearch(const KeyType &key, InternalPage *node) {
   // null key in the head.
-  int i = 1, j = node->GetSize() - 1
+  int i = 0, j = node->GetSize() - 1
   for (; i <= j;) {
     int mid = i + (j - i) / 2;
     if (comparator_(key, node->KeyAt(mid)) > 0) {
@@ -91,6 +95,7 @@ auto BPLUSTREE_TYPE::BinarySearch(const KeyType &key, InternalPage *node) {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) -> bool {
+
   return false;
 }
 
