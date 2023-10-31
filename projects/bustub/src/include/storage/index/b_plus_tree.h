@@ -48,7 +48,9 @@ class BPlusTree {
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr) -> bool;
 
-  auto BinarySearch(const KeyType &key, InternalPage *node);
+  auto BinarySearchInInternal(const KeyType &key, InternalPage *node);
+
+  auto BinarySearchInLeaf(const KeyType &key, LeafPage *node);
 
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *transaction = nullptr);

@@ -21,9 +21,7 @@ BPLUSTREE_TYPE::BPlusTree(std::string name, BufferPoolManager *buffer_pool_manag
  * Helper function to decide whether current b+tree is empty
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::IsEmpty() const -> bool { 
-  return root_page_id_ == INVALID_PAGE_ID; 
-}
+auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return root_page_id_ == INVALID_PAGE_ID; }
 /*****************************************************************************
  * SEARCH
  *****************************************************************************/
@@ -36,14 +34,9 @@ INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) -> bool {
   auto cur_page = buffer_pool_manager_->FetchPage(root_page_id_);
   auto cur_node = reinterpret_cast<BPlusTreePage *>(cur_page->GetData());
-  while (!cur_node->IsLeafPage())
-  {
+  while (!cur_node->IsLeafPage()) {
     auto internal_node = reinterpret_cast<BPlusTreeInternalPage *>(cur_node);
     auto target_pair_index = BinarySearch(key, internal_node);
-    // searched key not exists.
-    if (target_pair_index < 0) {
-      return false;
-    }
     // auto page_id = internal_node->ValueAt(target_pair_index);
     buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
     cur_page = buffer_pool_manager_->FetchPage(internal_node->ValueAt(target_pair_index));
@@ -67,9 +60,9 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::BinarySearch(const KeyType &key, InternalPage *node) {
+auto BPLUSTREE_TYPE::BinarySearchInInternal(const KeyType &key, InternalPage *node) {
   // null key in the head.
-  int i = 0, j = node->GetSize() - 1
+  int i = 0, j = node->GetSize() - 1;
   for (; i <= j;) {
     int mid = i + (j - i) / 2;
     if (comparator_(key, node->KeyAt(mid)) > 0) {
@@ -80,7 +73,9 @@ auto BPLUSTREE_TYPE::BinarySearch(const KeyType &key, InternalPage *node) {
       return mid;
     }
   }
-  return i - 1;
+
+  // inserted element index in internal node.
+  return i == node->GetSize() ? j : i;
 }
 
 /*****************************************************************************
@@ -95,8 +90,46 @@ auto BPLUSTREE_TYPE::BinarySearch(const KeyType &key, InternalPage *node) {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) -> bool {
+  auto cur_page = buffer_pool_manager_->FetchPage(root_page_id_);
+  auto cur_node = reinterpret_cast<BPlusTreePage *>(cur_page->GetData());
+  while (!cur_node->IsLeafPage()) {
+    auto internal_node = reinterpret_cast<BPlusTreeInternalPage *>(cur_node);
+    auto target_pair_index = BinarySearch(key, internal_node);
+    // if current node have duplicate key, return false.
+    if (target_pair_index > 0 && target_pair_index < node->GetSize() - 1) {
+      return false;
+    }
+    buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+    cur_page = buffer_pool_manager_->FetchPage(internal_node->ValueAt(target_pair_index));
+    cur_node = reinterpret_cast<BPlusTreePage *>(cur_page->GetData());
+  }
 
+  // if leaf node size less than max size.
+  auto leaf_node = reinterpret_cast<BPlusTreeLeafPage *>(cur_page->GetData());
+  auto insertion = BinarySearchInLeaf(key, leaf_node);
+
+  // move operation from insertion  to end.
+  
+  
   return false;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::BinarySearchInLeaf(const KeyType &key, LeafPage *node) {
+  int i = 0, j = node->GetSize() - 1;
+  while (i <= j) {
+    int mid = i + (j - i) / 2;
+    if (comparator_(key, node->KeyAt(mid)) > 0) {
+      i = mid + 1;
+    } else if (comparator_(key, node->KeyAt(mid)) < 0) {
+      j = mid - 1;
+    } else {
+      return mid;
+    }
+  }
+
+  // inserted place
+  return i;
 }
 
 /*****************************************************************************
