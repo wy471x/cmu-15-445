@@ -32,50 +32,40 @@ auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return root_page_id_ == INVALID_P
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) -> bool {
-  auto cur_page = buffer_pool_manager_->FetchPage(root_page_id_);
-  auto cur_node = reinterpret_cast<BPlusTreePage *>(cur_page->GetData());
-  while (!cur_node->IsLeafPage()) {
-    auto internal_node = reinterpret_cast<BPlusTreeInternalPage *>(cur_node);
-    auto target_pair_index = BinarySearch(key, internal_node);
-    // auto page_id = internal_node->ValueAt(target_pair_index);
-    buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
-    cur_page = buffer_pool_manager_->FetchPage(internal_node->ValueAt(target_pair_index));
-    cur_node = reinterpret_cast<BPlusTreePage *>(cur_page->GetData());
-  }
-
-  // search all values associated with key.
-  auto leaf_node = reinterpret_cast<BPlusTreeLeafPage *>(cur_page->GetData());
-  for (int i = 0; i < leaf_node->GetSize(); i++) {
-    if (comparator_(key, leaf_node->KeyAt(i)) == 0) {
-      result->push_back(leaf_node->ValueAt(i));
+  bool found = false;
+  Page *page = GetLeafPage(key);
+  auto leaf_page = reinterpret_cast<LeafPage *>(page->GetData());
+  for (int i = 0; i < leaf_page->GetSize(); i++) {
+    if (comparator_(leaf_page->KeyAt(i), key) == 0) {
+      result->emplace_back(leaf_page->ValueAt(i));
+      found = true;
     }
   }
-  buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
-  if (result->size() > 0) {
-    return true;
-  }
 
-  // key is not exists.
-  return false;
+  buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
+  return found;
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::BinarySearchInInternal(const KeyType &key, InternalPage *node) {
-  // null key in the head.
-  int i = 0, j = node->GetSize() - 1;
-  for (; i <= j;) {
-    int mid = i + (j - i) / 2;
-    if (comparator_(key, node->KeyAt(mid)) > 0) {
-      i = mid + 1;
-    } else if (comparator_(key, node->KeyAt(mid)) < 0) {
-      j = mid - 1;
-    } else {
-      return mid;
+auto BPLUSTREE_TYPE::GetLeafPage(const KeyType &key) -> Page * {
+  page_id_t next_page_id = root_page_id_;
+  while (true) {
+    Page *page = buffer_pool_manager_->FetchPage(next_page_id);
+    auto tree_pgae = reinterpret_cast<BPlusTreePage *>(page->GetData());
+    if (tree->IsLeafPage()) {
+      return page;
     }
-  }
 
-  // inserted element index in internal node.
-  return i == node->GetSize() ? j : i;
+    auto internal_page = static_cast<InternalPage *>(tree_page);
+    next_page_id = internal_page->ValueAt(internal_page->GetSize() - 1);
+    for (int i = 1; i < internal_page->GetSize(); i++) {
+      if (comparator_(internal_page->KeyAt(i), key) > 0) {
+        next_page_id = internal_page->ValueAt(i - 1);
+        break;
+      }
+    }
+    buffer_pool_manager_->UnpinPage(internal_page->GetPageId(), false);
+  }
 }
 
 /*****************************************************************************

@@ -48,8 +48,6 @@ class BPlusTree {
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr) -> bool;
 
-  auto BinarySearchInInternal(const KeyType &key, InternalPage *node);
-
   auto BinarySearchInLeaf(const KeyType &key, LeafPage *node);
 
   // Remove a key and its value from this B+ tree.
@@ -57,6 +55,8 @@ class BPlusTree {
 
   // return the value associated with a given key
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction = nullptr) -> bool;
+
+  auto GetLeafPage(const KeyType &key) -> Page *;
 
   // return the page id of the root node
   auto GetRootPageId() -> page_id_t;
