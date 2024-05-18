@@ -41,6 +41,7 @@ void BPlusTreePage::SetPageType(IndexPageType page_type) {  page_type_ = page_ty
 auto BPlusTreePage::GetSize() const -> int { return size_; }
 void BPlusTreePage::SetSize(int size) { size_ = size; }
 void BPlusTreePage::IncreaseSize(int amount) { size_ += amount; }
+void BPlusTreePage::DecreaseSize(int amount) { size_ += amount; }
 
 /*
  * Helper methods to get/set max size (capacity) of the page
@@ -53,17 +54,15 @@ void BPlusTreePage::SetMaxSize(int size) { max_size_ = size; }
  * Generally, min page size == max page size / 2
  */
 auto BPlusTreePage::GetMinSize() const -> int { 
-    // if cur page is root page.
-    if (IsRootPage()) {
-        return IsLeafPage() ? 1 : 2;
-    } 
+    int min_size;
 
-    // if cur page is leaf page.
     if (IsLeafPage()) {
-        return std::ceil(max_size_ - 1 / 2);
+        min_size = max_size_ / 2;
+    } else {
+        min_size = (max_size_ + 1) / 2;
     }
 
-    return std::ceil(max_size_ / 2) - 1;
+    return min_size;
 }
 
 /*

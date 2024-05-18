@@ -63,7 +63,86 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyAt(int index) const -> KeyType {
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::ValueAt(int index) const -> ValueType { return array_[index].second; }
 
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::InsertByKey(const KeyType &key, const ValueType &value,
+                                             const KeyComparator &comparator) -> bool {
+    int initial_len = GetSize();  // 插入数据前的长度
+    int insert_pos = 0;           // 插入数据位置
 
+    // 2 -> 1 3
+    // 2 -> 1 2 3
+    // 2 -> 1
+    // 2 -> 3
+    while (insert_pos < initial_len) {
+        if (comparator(key, array_[insert_pos].first) == 0) {
+            return false;  // key不能重复
+        }
+
+        if (comparator(key, array_[insert_pos].first) > 0) {
+            insert_pos++;
+        } else {
+            break;
+        }
+    }
+
+    /* 插入位置后面的元素后移 */
+    IncreaseSize(1);
+    for (int i = initial_len; i > insert_pos; i--) {
+        array_[i] = array_[i - 1];
+    }
+
+    /* 插入 */
+    array_[insert_pos].first = key;
+    array_[insert_pos].second = value;
+
+    return true;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfDataTo(B_PLUS_TREE_LEAF_PAGE_TYPE *des_page) {
+    int initial_len = GetSize();  // 移出数据前的长度
+
+    for (int i = GetMinSize(), j = 0; i < initial_len; i++, j++) {
+        des_page->array_[j] = array_[i];
+        des_page->IncreaseSize(1);
+        this->DecreaseSize(1);
+    }
+
+    des_page->SetNextPageId(this->GetNextPageId());
+    this->SetNextPageId(des_page->GetPageId());
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveByIndex(int index) {
+    for (int i = index; i < GetSize() - 1; i++) {
+        array_[i] = array_[i + 1];
+    }
+
+    DecreaseSize(1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveByKey(const KeyType &key, const KeyComparator &comparator) -> bool {
+    for (int i = 0; i < GetSize(); i++) {
+        if (comparator(array_[i].first, key) == 0) {
+            RemoveByIndex(i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveAllDataTo(B_PLUS_TREE_LEAF_PAGE_TYPE *des_page) {
+    for (int i = 0, j = des_page->GetSize(); i < GetSize(); i++, j++) {
+        des_page->array_[j] = array_[i];
+        des_page->IncreaseSize(1);
+    }
+    this->SetSize(0);
+
+    des_page->SetNextPageId(this->GetNextPageId());
+}
 
 
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;

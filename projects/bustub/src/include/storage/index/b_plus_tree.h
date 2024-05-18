@@ -48,15 +48,22 @@ class BPlusTree {
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr) -> bool;
 
-  auto BinarySearchInLeaf(const KeyType &key, LeafPage *node);
+  // auto BinarySearchInLeaf(const KeyType &key, LeafPage *node);
+  void HandleLeafOverflow(LeafPage *target_page);
+  void HandleInternalOverflow(InternalPage *target_page, const KeyType &key, const page_id_t &value);
 
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *transaction = nullptr);
+  auto FindFistKey(InternalPage *target_page) -> KeyType;
+  void HandleLeafUnderflow(LeafPage *target_page);
+  void HandleInternalUnderflow(InternalPage *target_page);
+  auto GetBrotherPage(InternalPage *parent_page, BPlusTreePage *child_page, int &target_index, int &bro_index) -> BPlusTreePage *;
 
   // return the value associated with a given key
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction = nullptr) -> bool;
 
-  auto GetLeafPage(const KeyType &key) -> Page *;
+  // auto GetLeafPage(const KeyType &key) -> Page *;
+  auto FindLeafPage(const KeyType &key) -> LeafPage *;
 
   // return the page id of the root node
   auto GetRootPageId() -> page_id_t;
@@ -93,6 +100,7 @@ class BPlusTree {
   KeyComparator comparator_;
   int leaf_max_size_;
   int internal_max_size_;
+  std::shared_mutex shared_mutex_;
 };
 
 }  // namespace bustub
