@@ -550,15 +550,49 @@ auto BPLUSTREE_TYPE::FindFistKey(InternalPage *target_page) -> KeyType {
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); }
+auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
+    /* B+树为空 */
+    if (root_page_id_ == INVALID_PAGE_ID) {
+        return INDEXITERATOR_TYPE();
+    }
+
+    /* 循环寻找最左边的叶子页面 */
+    auto cur_page = reinterpret_cast<BPlusTreePage *>(buffer_pool_manager_->FetchPage(root_page_id_)->GetData());
+    while (true) {
+        if (cur_page->IsLeafPage()) {
+            buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+            return INDEXITERATOR_TYPE(cur_page->GetPageId(), 0, buffer_pool_manager_);
+        }
+
+        /* 继续查找 */
+        page_id_t next_page_id = static_cast<InternalPage *>(cur_page)->ValueAt(0);
+        auto next_page = reinterpret_cast<BPlusTreePage *>(buffer_pool_manager_->FetchPage(next_page_id)->GetData());
+        buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+        cur_page = next_page;
+    }
+}
 
 /*
  * Input parameter is low key, find the leaf page that contains the input key
  * first, then construct index iterator
  * @return : index iterator
- */
-INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); }
+ */INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
+    /* B+树为空 */
+    if (root_page_id_ == INVALID_PAGE_ID) {
+        return INDEXITERATOR_TYPE();
+    }
+    
+    LeafPage *target_leaf_page = FindLeafPage(key);
+
+    int i = 0;
+    while (i < target_leaf_page->GetSize() && comparator_(target_leaf_page->KeyAt(i), key) < 0) {
+        i++;
+    }
+
+    buffer_pool_manager_->UnpinPage(target_leaf_page->GetPageId(), false);
+    return INDEXITERATOR_TYPE(target_leaf_page->GetPageId(), i, buffer_pool_manager_);
+}
 
 /*
  * Input parameter is void, construct an index iterator representing the end
