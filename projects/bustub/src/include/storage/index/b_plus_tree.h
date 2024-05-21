@@ -57,7 +57,8 @@ class BPlusTree {
   auto FindFistKey(InternalPage *target_page) -> KeyType;
   void HandleLeafUnderflow(LeafPage *target_page);
   void HandleInternalUnderflow(InternalPage *target_page);
-  auto GetBrotherPage(InternalPage *parent_page, BPlusTreePage *child_page, int &target_index, int &bro_index) -> BPlusTreePage *;
+  auto GetBrotherPage(InternalPage *parent_page, BPlusTreePage *child_page, int &target_index, int &bro_index)
+      -> BPlusTreePage *;
 
   // return the value associated with a given key
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction = nullptr) -> bool;

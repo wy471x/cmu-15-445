@@ -19,20 +19,18 @@ namespace bustub {
  */
 auto BPlusTreePage::IsLeafPage() const -> bool { return page_type_ == IndexPageType::LEAF_PAGE; }
 auto BPlusTreePage::IsRootPage() const -> bool {
-    // if root page is leaf page
-    if (page_type_ == IndexPageType::LEAF_PAGE 
-    && size_ >= 0 && size_ <= max_size_) {
-        return true;
-    }
-    
-    // if root page is internal page
-    if (page_type_ == IndexPageType::INTERNAL_PAGE
-    && size_ >= 1 && size_ <= max_size_) {
-        return true;
-    }
-    return false; 
+  // if root page is leaf page
+  if (page_type_ == IndexPageType::LEAF_PAGE && size_ >= 0 && size_ <= max_size_) {
+    return true;
+  }
+
+  // if root page is internal page
+  if (page_type_ == IndexPageType::INTERNAL_PAGE && size_ >= 1 && size_ <= max_size_) {
+    return true;
+  }
+  return false;
 }
-void BPlusTreePage::SetPageType(IndexPageType page_type) {  page_type_ = page_type; }
+void BPlusTreePage::SetPageType(IndexPageType page_type) { page_type_ = page_type; }
 
 /*
  * Helper methods to get/set size (number of key/value pairs stored in that
@@ -53,16 +51,16 @@ void BPlusTreePage::SetMaxSize(int size) { max_size_ = size; }
  * Helper method to get min page size
  * Generally, min page size == max page size / 2
  */
-auto BPlusTreePage::GetMinSize() const -> int { 
-    int min_size;
+auto BPlusTreePage::GetMinSize() const -> int {
+  int min_size;
 
-    if (IsLeafPage()) {
-        min_size = max_size_ / 2;
-    } else {
-        min_size = (max_size_ + 1) / 2;
-    }
+  if (IsLeafPage()) {
+    min_size = max_size_ / 2;
+  } else {
+    min_size = (max_size_ + 1) / 2;
+  }
 
-    return min_size;
+  return min_size;
 }
 
 /*

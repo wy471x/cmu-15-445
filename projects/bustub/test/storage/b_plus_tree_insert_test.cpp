@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <random>
 
 #include "buffer/buffer_pool_manager_instance.h"
 #include "gtest/gtest.h"
