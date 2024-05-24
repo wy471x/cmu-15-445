@@ -12,6 +12,8 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <random>
+#include <iostream>
 
 #include "buffer/buffer_pool_manager_instance.h"
 #include "gtest/gtest.h"
@@ -165,4 +167,97 @@ TEST(BPlusTreeTests, DeleteTest2) {
   remove("test.db");
   remove("test.log");
 }
+
+#define USE_RANDOM_DATA 1
+TEST(BPlusTreeTests, RandomTest) {
+    auto key_schema = ParseCreateStatement("a bigint");
+    GenericComparator<8> comparator(key_schema.get());
+    BufferPoolManager *bpm = new BufferPoolManagerInstance(50, new DiskManager("test.db"));
+    std::random_device random;
+
+#if USE_RANDOM_DATA
+    int internal_page_max_size = random() % 5 + 2;
+    int leaf_page_max_size = random() % 5 + internal_page_max_size;
+#else
+    int leaf_page_max_size = 8;
+    int internal_page_max_size = 5;
+#endif
+
+    BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("test", bpm, comparator, internal_page_max_size,
+                                                             leaf_page_max_size);
+    GenericKey<8> index_key;
+    RID rid;
+
+    auto transaction = new Transaction(0);
+    page_id_t header_page_id;
+    [[maybe_unused]] auto header_page = bpm->NewPage(&header_page_id);
+
+    ASSERT_EQ(header_page_id, HEADER_PAGE_ID);
+
+#if USE_RANDOM_DATA
+    int len = random() % 1000;
+    std::vector<int64_t> keys(len);
+    for (int i = 0; i < len; i++) {
+        keys.at(i) = random() % 500;
+    }
+#else
+    std::vector<int64_t> keys = {5, 20, 1, 44, 22, 42, 5, 49, 41, 12, 29, 3, 43, 33, 26, 44, 44, 29, 2, 46};
+    std::vector<int64_t> del_keys = {41, 42, 3, 5, 26, 1, 49, 29, 20, 5, 44, 33, 29, 22, 12, 44, 44, 2, 46, 43};
+#endif
+
+    std::cout << leaf_page_max_size << " " << internal_page_max_size << std::endl;
+    for (size_t i = 0; i < keys.size(); i++) {
+        std::cout << keys.at(i) << ((i == keys.size() - 1) ? "\n" : ", ");
+    }
+
+    for (auto key : keys) {
+        rid.Set(static_cast<int32_t>(key >> 32), key);
+        index_key.SetFromInteger(key);
+
+        tree.Insert(index_key, rid, transaction);
+        tree.Draw(bpm, "/Users/liaohan/CLionProjects/bustub/cmake-build-debug/test/pic");
+        EXPECT_EQ(bpm->GetUnpinCount(), 1);
+    }
+
+    std::vector<RID> rids;
+    for (auto key : keys) {
+        rids.clear();
+        index_key.SetFromInteger(key);
+        tree.GetValue(index_key, &rids);
+        EXPECT_EQ(rids.size(), 1);
+        EXPECT_EQ(rids[0].GetSlotNum(), key);
+        EXPECT_EQ(bpm->GetUnpinCount(), 1);
+    }
+
+#if USE_RANDOM_DATA
+    std::shuffle(keys.begin(), keys.end(), random);
+#else
+    keys = del_keys;
+#endif
+
+    for (size_t i = 0; i < keys.size(); i++) {
+        std::cout << keys.at(i) << ((i == keys.size() - 1) ? "\n" : ", ");
+    }
+
+    for (auto key : keys) {
+        index_key.SetFromInteger(key);
+        tree.Remove(index_key, transaction);
+        if (tree.GetRootPageId() != INVALID_PAGE_ID) {
+            tree.Draw(bpm, "dot文件路径");
+        }
+        EXPECT_EQ(bpm->GetUnpinCount(), 1);
+    }
+
+    bpm->UnpinPage(HEADER_PAGE_ID, true);
+    EXPECT_EQ(tree.GetRootPageId(), INVALID_PAGE_ID);
+    EXPECT_EQ(bpm->GetUnpinCount(), 0);
+    delete transaction;
+    delete bpm;
+    remove("test.db");
+    remove("test.log");
+}
+
+}
+
+
 }  // namespace bustub
